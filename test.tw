@@ -1,0 +1,7 @@
+
+Main(){
+    var x = 10;
+    var y = 5;
+    Print(x * y);
+    Print(x - y);
+}
