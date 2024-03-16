@@ -51,6 +51,12 @@ static class Parser{
             else if(tokens[0].type == TokenType.Varname){
                 return new Literal(LiteralType.Variable, tokens[0]);
             }
+            else if(tokens[0].type == TokenType.True){
+                return new Literal(LiteralType.True, tokens[0]);
+            }
+            else if(tokens[0].type == TokenType.False){
+                return new Literal(LiteralType.False, tokens[0]);
+            }
             else{
                 throw new Exception("Unexpected token: "+tokens[0]);
             }
@@ -96,11 +102,20 @@ static class Parser{
         List<IStatement> statements = new();
         for(var i=0;i<statementTokens.Count-1;i++){
             var s = statementTokens[i];
-            if(s[1].type == TokenType.Equals){
+            if(s.Count>1 && s[1].type == TokenType.Equals){
                 statements.Add(new Assign(s[0], ParseExpression(s.GetRange(2, s.Count-2))));
             }
             else if(s[0].type == TokenType.Var){
                 statements.Add(new Var(s[1], ParseExpression(s.GetRange(3, s.Count-3))));
+            }
+            else if(s[0].type == TokenType.While){
+                statements.Add(new While(ParseExpression(Tokenizer.Tokenize(s[1].value)), ParseBody(s[2].value)));
+            }
+            else if(s[0].type == TokenType.If){
+                statements.Add(new If(ParseExpression(Tokenizer.Tokenize(s[1].value)), ParseBody(s[2].value)));
+            }
+            else if(s[0].type == TokenType.Break){
+                statements.Add(new Break());
             }
             else if(s[0].type == TokenType.Varname && s[1].type == TokenType.Parens){
                 statements.Add(new Call(s[0], ParseArgs(s[1])));

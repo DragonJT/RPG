@@ -6,17 +6,6 @@ using Godot;
 enum ControlFlow{None, Break, Continue, Return}
 
 
-/*
-class Literal:IExpression;
-class BinaryOp:IExpression;
-class UnaryOp:IExpression;
-class Call:IExpression, IStatement;
-class Assign:IStatement;
-class Var:IStatement;
-class Body;
-class Function;
-class Tree;*/
-
 class VariableInstance{
     public dynamic value;
 
@@ -101,13 +90,36 @@ class TreeWalker{
             funcStack.Peek().Pop();
             return null;
         }
-        if(node is Var vr){
-            funcStack.Peek().Add(vr.name.value, Run(vr.value));
+        if(node is Var var){
+            funcStack.Peek().Add(var.name.value, Run(var.value));
             return null;
         }
         if(node is Assign assign){
             funcStack.Peek().TryGetValue(assign.name.value, out VariableInstance varInstance);
             varInstance.value = Run(assign.value);
+            return null;
+        }
+        if(node is While @while){
+            while(Run(@while.condition)){
+                Run(@while.body);
+                if(controlFlow == ControlFlow.Break){
+                    controlFlow = ControlFlow.None;
+                    return null;
+                }
+                else if(controlFlow == ControlFlow.Return){
+                    return null;
+                }
+            }
+            return null;
+        }
+        if(node is If @if){
+            if(Run(@if.condition)){
+                Run(@if.body);
+            }
+            return null;
+        }
+        if(node is Break){
+            controlFlow = ControlFlow.Break;
             return null;
         }
         if(node is Call call){
@@ -144,6 +156,8 @@ class TreeWalker{
                 LiteralType.String => literal.value.value,
                 LiteralType.Char => literal.value.value[0],
                 LiteralType.Variable => funcStack.Peek().GetValue(literal.value.value),
+                LiteralType.True => true,
+                LiteralType.False => false,
                 _ => throw new Exception("Unexpected literaltype: " + literal.type.ToString()),
             };
         }

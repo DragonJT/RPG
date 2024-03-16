@@ -11,7 +11,8 @@ public partial class WebBrowser : Control
 		httpRequest.Request("https://godotengine.org/");
 		var screenSize = DisplayServer.ScreenGetSize();
 		GetWindow().Position = new Vector2I((int)(screenSize.X*0.1f),(int)(screenSize.X*0.05f));
-		GetWindow().Size = new Vector2I((int)(screenSize.X*0.8f), (int)(screenSize.Y*0.8f));
+        GetWindow().Size = new Vector2I(0,0);
+		//GetWindow().Size = new Vector2I((int)(screenSize.X*0.8f), (int)(screenSize.Y*0.8f));
 	}
 
 	private void HttpRequestCompleted(long result, long responseCode, string[] headers, byte[] body)

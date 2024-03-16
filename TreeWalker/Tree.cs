@@ -13,7 +13,7 @@ interface INode{}
 
 interface IExpression:INode{}
 
-enum LiteralType{Float, Int, String, Char, Variable}
+enum LiteralType{Float, Int, String, Char, Variable, True, False}
 class Literal:IExpression{
     public LiteralType type;
     public Token value;
@@ -68,6 +68,26 @@ class Assign:IStatement{
     }
 }
 
+class While:IStatement{
+    public IExpression condition;
+    public Body body;
+
+    public While(IExpression condition, Body body){
+        this.condition = condition;
+        this.body = body;
+    }
+}
+
+class If:IStatement{
+    public IExpression condition;
+    public Body body;
+
+    public If(IExpression condition, Body body){
+        this.condition = condition;
+        this.body = body;
+    }
+}
+
 class Var:IStatement{
     public Token name;
     public IExpression value;
@@ -76,6 +96,9 @@ class Var:IStatement{
         this.name = name;
         this.value = value;
     }
+}
+
+class Break:IStatement{
 }
 
 class Body:INode{
