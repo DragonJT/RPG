@@ -67,6 +67,9 @@ class TreeWalker{
             GD.Print(args[0].ToString());
             return null;
         }
+        else if(name == "Length"){
+            return args[0].Length;
+        }
         var function = tree.functions.First(t=>t.name.value == name);
         var funcInstance = new FunctionInstance();
         funcStack.Push(funcInstance);
@@ -137,7 +140,10 @@ class TreeWalker{
         }
         if(node is If @if){
             if(Run(@if.condition)){
-                Run(@if.body);
+                var returnValue = Run(@if.body);
+                if(controlFlow == ControlFlow.Return){
+                    return returnValue;
+                }
             }
             return null;
         }
@@ -160,7 +166,14 @@ class TreeWalker{
             var args = call.args.Select(a=>Run(a)).ToArray();
             return Invoke(call.name.value, args);
         }
+        if(node is Indexor indexor){
+            var index = Run(indexor.indexExpression);
+            return funcStack.Peek().GetValue(indexor.varname.value)[index];
+        }
         if(node is UnaryOp unaryOp){
+            if(unaryOp.op.type == TokenType.Minus){
+                return -Run(unaryOp.expression);
+            }
             if(unaryOp.op.value == "!"){
                 return !Run(unaryOp.expression);
             }
@@ -169,18 +182,25 @@ class TreeWalker{
             }
         }
         if(node is BinaryOp binaryOp){
-            var left = Run(binaryOp.left);
-            var right = Run(binaryOp.right);
-            return binaryOp.op.value switch
+            var left = binaryOp.left;
+            var right = binaryOp.right;
+            var returnValue = binaryOp.op.value switch
             {
-                "+" => left + right,
-                "-" => left - right,
-                "*" => left * right,
-                "/" => left / right,
-                ">" => left > right,
-                "<" => left < right,
+                "+" => Run(left) + Run(right),
+                "-" => Run(left) - Run(right),
+                "*" => Run(left) * Run(right),
+                "/" => Run(left) / Run(right),
+                ">" => Run(left) > Run(right),
+                "<" => Run(left) < Run(right),
+                "<=" => Run(left) <= Run(right),
+                ">=" => Run(left) >= Run(right),
+                "!=" => Run(left) != Run(right),
+                "==" => Run(left) == Run(right),
+                "&&" => Run(left) && Run(right),
+                "||" => Run(left) || Run(right),
                 _ => throw new Exception("Unexpected binaryOp: " + binaryOp.op.value),
             };
+            return returnValue;
         }
         if(node is Literal literal){
             return literal.type switch

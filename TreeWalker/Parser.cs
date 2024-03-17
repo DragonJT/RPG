@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using Godot;
 
 static class Parser{
     static List<List<Token>> SplitByComma(List<Token> tokens){
@@ -26,8 +27,9 @@ static class Parser{
         return SplitByComma(Tokenizer.Tokenize(token.value)).Select(ParseExpression).ToArray();
     }
 
-    static IExpression ParseExpression(List<Token> tokens){
-        var operators = new string[][]{new string[]{"<", ">"}, new string[]{"+", "-"}, new string[]{"/", "*"}};
+    static IExpression ParseSubExpression(List<Token> tokens){
+        var operators = new string[][]{ new string[]{"&&", "||"}, new string[]{">=", "<=", "==", "!="},
+            new string[]{"<", ">"}, new string[]{"+", "-"}, new string[]{"/", "*"}};
         if(tokens.Count == 0){
             throw new Exception("No tokens");
         }
@@ -64,19 +66,38 @@ static class Parser{
             if(tokens[0].type == TokenType.Varname && tokens[1].type == TokenType.Parens){
                 return new Call(tokens[0], ParseArgs(tokens[1]));
             }
+            else if(tokens[0].type == TokenType.Varname && tokens[1].type == TokenType.Square){
+                return new Indexor(tokens[0], ParseSubExpression(Tokenizer.Tokenize(tokens[1].value)));
+            }
         }
         foreach(var ops in operators){
-            var index = tokens.FindLastIndex(t=>ops.Contains(t.value));
+            var index = tokens.FindLastIndex(t=>t.type == TokenType.Operator && ops.Contains(t.value));
             if(index>=0){
-                var left = ParseExpression(tokens.GetRange(0, index));
-                var right = ParseExpression(tokens.GetRange(index+1, tokens.Count - (index+1)));
+                var left = ParseSubExpression(tokens.GetRange(0, index));
+                var right = ParseSubExpression(tokens.GetRange(index+1, tokens.Count - (index+1)));
                 return new BinaryOp(left, right, tokens[index]);
             }
         }
+        if(tokens[0].type == TokenType.Minus){
+            return new UnaryOp(ParseSubExpression(tokens.GetRange(1, tokens.Count-1)), tokens[0]);
+        }
         if(tokens[0].type == TokenType.Operator && tokens[0].value == "!"){
-            return new UnaryOp(ParseExpression(tokens.GetRange(1, tokens.Count-1)), tokens[0]);
+            return new UnaryOp(ParseSubExpression(tokens.GetRange(1, tokens.Count-1)), tokens[0]);
         }
         throw new Exception("Unexpected tokens");
+    }
+
+    static IExpression ParseExpression(List<Token> tokens){
+        var subtractsSurroundingTokens = new List<TokenType>{TokenType.Varname, TokenType.Int, TokenType.Float};
+        for(var i=1;i<tokens.Count-1;i++){
+            bool isSubtract = tokens[i].type == TokenType.Minus 
+                && subtractsSurroundingTokens.Contains(tokens[i-1].type) 
+                && subtractsSurroundingTokens.Contains(tokens[i+1].type);
+            if(isSubtract){
+                tokens[i].type = TokenType.Operator;
+            }
+        }
+        return ParseSubExpression(tokens);
     }
 
     static List<List<Token>> SplitIntoStatements(List<Token> tokens){
@@ -132,7 +153,7 @@ static class Parser{
                 statements.Add(new Call(s[0], ParseArgs(s[1])));
             }
             else{
-                throw new Exception("SyntaxError: Unexpected statement");
+                throw new Exception("SyntaxError: Unexpected statement: "+s[0].value);
             }
         }
         return new Body(statements);
@@ -154,7 +175,7 @@ static class Parser{
             var name = tokens[i];
             var parameters = ParseParameters(tokens[i+1].value);
             functions.Add(new Function(name, parameters, ParseBody(tokens[i+2].value)));
-            i+=4;
+            i+=3;
         }
     }
 }

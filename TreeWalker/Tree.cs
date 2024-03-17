@@ -22,6 +22,10 @@ class Literal:IExpression{
         this.type = type;
         this.value = value;
     }
+
+    public override string ToString(){
+        return value.value;
+    }
 }
 
 class BinaryOp:IExpression{
@@ -33,6 +37,10 @@ class BinaryOp:IExpression{
         this.left = left;
         this.right = right;
         this.op = op;
+    }
+
+    public override string ToString() {
+        return $"{left} {op.value} {right}";
     }
 }
 
@@ -55,6 +63,16 @@ class Call:IExpression, IStatement{
     public Call(Token name, IExpression[] args){
         this.name = name;
         this.args = args;
+    }
+}
+
+class Indexor:IExpression{
+    public Token varname;
+    public IExpression indexExpression;
+
+    public Indexor(Token varname, IExpression indexExpression){
+        this.varname = varname;
+        this.indexExpression = indexExpression;
     }
 }
 

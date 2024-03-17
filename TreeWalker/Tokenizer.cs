@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using System;
+using System.Linq;
 
-enum TokenType{Varname, Int, Float, Curly, Square, Parens, Operator, DoubleQuote,
+enum TokenType{Varname, Int, Float, Curly, Square, Parens, Operator, DoubleQuote, Minus,
     SingleQuote, Equals, SemiColon, Comma, Var, While, If, Break, True, False, Return, For}
 
 class Token{
@@ -33,13 +34,14 @@ static class Tokenizer{
         var open = "({[";
         var close = ")}]";
         var specialLiterals = new Dictionary<char, TokenType> {
-             {'=', TokenType.Equals}, {';', TokenType.SemiColon}, {',', TokenType.Comma} 
+             {'=', TokenType.Equals}, {';', TokenType.SemiColon}, {',', TokenType.Comma}, {'-', TokenType.Minus}
         };
         var varnameLiterals = new Dictionary<string, TokenType>{
             {"var", TokenType.Var}, {"while", TokenType.While}, {"if", TokenType.If}, {"break", TokenType.Break},
             {"true", TokenType.True}, {"false", TokenType.False}, {"return", TokenType.Return}, {"for", TokenType.For}
         };
-        var operators = "+-*/<>!";
+        var operators = "+*/<>!";
+        var operators2 = new string[]{"==", ">=", "<=", "!=", "&&", "||"};
 
         loop:
         if(index>=code.Length){
@@ -67,7 +69,7 @@ static class Tokenizer{
                 goto loop;
             }
         }
-        else if(char.IsDigit(c)){
+        if(char.IsDigit(c)){
             var start = index;
             index++;
             var type = TokenType.Int;
@@ -90,7 +92,7 @@ static class Tokenizer{
                 goto loop;
             }
         }
-        else if(open.Contains(c)){
+        if(open.Contains(c)){
             var start = index;
             var depth = 1;
             index++;
@@ -129,7 +131,7 @@ static class Tokenizer{
                 index++;
             }
         }
-        else if(c == '"'){
+        if(c == '"'){
             var start = index;
             index++;
             while(true){
@@ -149,7 +151,7 @@ static class Tokenizer{
                 index++;
             }
         }
-        else if(c == '\''){
+        if(c == '\''){
             var start = index;
             index++;
             while(true){
@@ -169,12 +171,20 @@ static class Tokenizer{
                 index++;
             }
         }
-        else if(specialLiterals.TryGetValue(c, out TokenType value)){
+        if(index+1<code.Length){
+            var c2 = code.Substring(index, 2);
+            if(operators2.Contains(c2)){
+                tokens.Add(new Token(c2, index, index+2, TokenType.Operator));
+                index+=2;
+                goto loop;
+            }
+        }
+        if(specialLiterals.TryGetValue(c, out TokenType value)){
             tokens.Add(new Token(c.ToString(), index, index+1, value));
             index++;
             goto loop;
         }
-        else if(operators.Contains(c)){
+        if(operators.Contains(c)){
             tokens.Add(new Token(c.ToString(), index, index+1, TokenType.Operator));
             index++;
             goto loop;

@@ -17,10 +17,11 @@ public partial class WebBrowser : Control
 
 	private void HttpRequestCompleted(long result, long responseCode, string[] headers, byte[] body)
 	{
+        var html = body.GetStringFromUtf8();
         var file = FileAccess.Open("test.tw", FileAccess.ModeFlags.Read);
 	    var code = file.GetAsText();
         var tree = Parser.ParseTree(code);
-        new TreeWalker(tree).Invoke("Main");
+        new TreeWalker(tree).Invoke("Main", html);
 
         //GD.Print(body.GetStringFromUtf8());
 	}

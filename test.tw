@@ -1,15 +1,47 @@
 
-Main(){
-    var x = 10;
-    var i = 2;
-    for(i, 12, 18){
-        Print(i);
+HasStringAt(original, string, index){
+    if(Length(string) + index >= Length(original)){
+        return false;
     }
-    for(i, 0, 5){
-        Print(i);
-        if(i>3){
-            return;
+    for(i, 0, Length(string)){
+        if(original[index+i] != string[i]){
+            return false;
         }
     }
-    Print(x);
+    return true;
+}
+
+SearchForString(start, original, search){
+    for(i, start, Length(original)){
+        if(HasStringAt(original, search, i)){
+            return i;
+        }
+    }
+    return -1;
+}
+
+SubString(original, start, end){
+    var result = "";
+    for(i, start, end){
+        result = result + original[i];
+    }
+    return result;
+}
+
+Main(html){
+    var index = 0;
+    while(true){
+        var index1 = SearchForString(index, html, "<h2>");
+        if(index1 == -1){
+            return;
+        }
+        index1 = index1+4;
+        var index2 = SearchForString(index1, html, "</h2>");
+        if(index2 == -1){
+            return;
+        }
+        index = index2;
+        Print(SubString(html, index1, index2));
+    }
+    
 }
