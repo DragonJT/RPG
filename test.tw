@@ -41,7 +41,7 @@ Main(html){
             return;
         }
         index = index2;
-        Print(SubString(html, index1, index2));
+        AddH2(SubString(html, index1, index2));
     }
     
 }

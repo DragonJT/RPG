@@ -55,11 +55,14 @@ class FunctionInstance{
 
 class TreeWalker{
     readonly Tree tree;
+    readonly Control control;
+    float y = 0;
     ControlFlow controlFlow = ControlFlow.None;
     readonly Stack<FunctionInstance> funcStack = new();
 
-    public TreeWalker(Tree tree){
+    public TreeWalker(Tree tree, Control control){
         this.tree = tree;
+        this.control = control;
     }
 
     public dynamic Invoke(string name, params dynamic[] args){
@@ -69,6 +72,21 @@ class TreeWalker{
         }
         else if(name == "Length"){
             return args[0].Length;
+        }
+        else if(name == "AddH2"){
+            var h2 = new RichTextLabel();
+            control.AddChild(h2);
+            var fontSize = 100;
+            h2.Text = args[0];
+            var theme = new Theme
+            {
+                DefaultFontSize = fontSize
+            };
+            h2.Theme = theme;
+            h2.Position = new Vector2(100, y);
+            h2.Size = new Vector2(1500, fontSize*1.5f);
+            y+=fontSize*1.5f;
+            return null;
         }
         var function = tree.functions.First(t=>t.name.value == name);
         var funcInstance = new FunctionInstance();
