@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System;
 
 enum TokenType{Varname, Int, Float, Curly, Square, Parens, Operator, DoubleQuote,
-    SingleQuote, Equals, SemiColon, Comma, Var, While, If, Break, True, False}
+    SingleQuote, Equals, SemiColon, Comma, Var, While, If, Break, True, False, Return, For}
 
 class Token{
     public string value;
@@ -37,7 +37,7 @@ static class Tokenizer{
         };
         var varnameLiterals = new Dictionary<string, TokenType>{
             {"var", TokenType.Var}, {"while", TokenType.While}, {"if", TokenType.If}, {"break", TokenType.Break},
-            {"true", TokenType.True}, {"false", TokenType.False}
+            {"true", TokenType.True}, {"false", TokenType.False}, {"return", TokenType.Return}, {"for", TokenType.For}
         };
         var operators = "+-*/<>!";
 

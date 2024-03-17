@@ -29,8 +29,10 @@ class FunctionInstance{
         variableStack.RemoveAt(variableStack.Count-1);
     }
 
-    public void Add(string name, dynamic value){
-        variableStack[^1].Add(name, new VariableInstance(value));
+    public VariableInstance Add(string name, dynamic value){
+        var varInstance = new VariableInstance(value);
+        variableStack[^1].Add(name, varInstance);
+        return varInstance;
     }
 
     public bool TryGetValue(string name, out VariableInstance value){
@@ -101,15 +103,36 @@ class TreeWalker{
         }
         if(node is While @while){
             while(Run(@while.condition)){
-                Run(@while.body);
+                var returnValue = Run(@while.body);
                 if(controlFlow == ControlFlow.Break){
                     controlFlow = ControlFlow.None;
                     return null;
                 }
                 else if(controlFlow == ControlFlow.Return){
-                    return null;
+                    return returnValue;
                 }
             }
+            return null;
+        }
+        if(node is For @for){
+            var start = Run(@for.start);
+            var end = Run(@for.end);
+            funcStack.Peek().Push();
+            var iterator = funcStack.Peek().Add(@for.varname.value, start);
+            while(iterator.value<end){
+                var returnValue = Run(@for.body);
+                if(controlFlow == ControlFlow.Break){
+                    controlFlow = ControlFlow.None;
+                    funcStack.Peek().Pop();
+                    return null;
+                }
+                else if(controlFlow == ControlFlow.Return){
+                    funcStack.Peek().Pop();
+                    return returnValue;
+                }
+                iterator.value += 1;
+            }
+            funcStack.Peek().Pop();
             return null;
         }
         if(node is If @if){
@@ -121,6 +144,17 @@ class TreeWalker{
         if(node is Break){
             controlFlow = ControlFlow.Break;
             return null;
+        }
+        if(node is Return @return){
+            if(@return.expression == null){
+                controlFlow = ControlFlow.Return;
+                return null;
+            }
+            else{
+                var returnValue = Run(@return.expression);
+                controlFlow = ControlFlow.Return;
+                return returnValue;
+            }
         }
         if(node is Call call){
             var args = call.args.Select(a=>Run(a)).ToArray();

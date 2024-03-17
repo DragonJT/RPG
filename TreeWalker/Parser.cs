@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System;
-using Godot;
 
 static class Parser{
     static List<List<Token>> SplitByComma(List<Token> tokens){
@@ -116,6 +115,18 @@ static class Parser{
             }
             else if(s[0].type == TokenType.Break){
                 statements.Add(new Break());
+            }
+            else if(s[0].type == TokenType.For){
+                var args = SplitByComma(Tokenizer.Tokenize(s[1].value));
+                statements.Add(new For(args[0][0], ParseExpression(args[1]), ParseExpression(args[2]), ParseBody(s[2].value)));
+            }
+            else if(s[0].type == TokenType.Return){
+                if(s.Count == 1){
+                    statements.Add(new Return(null));
+                }
+                else{
+                    statements.Add(new Return(ParseExpression(s.GetRange(1, s.Count-1))));
+                }
             }
             else if(s[0].type == TokenType.Varname && s[1].type == TokenType.Parens){
                 statements.Add(new Call(s[0], ParseArgs(s[1])));

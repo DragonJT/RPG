@@ -2,11 +2,14 @@
 Main(){
     var x = 10;
     var i = 2;
-    while(true){
-        if(i>10){
-            break;
-        }
-        Print(i*x);
-        i=i+1;
+    for(i, 12, 18){
+        Print(i);
     }
+    for(i, 0, 5){
+        Print(i);
+        if(i>3){
+            return;
+        }
+    }
+    Print(x);
 }

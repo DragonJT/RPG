@@ -78,6 +78,20 @@ class While:IStatement{
     }
 }
 
+class For:IStatement{
+    public Token varname;
+    public IExpression start;
+    public IExpression end;
+    public Body body;
+
+    public For(Token varname, IExpression start, IExpression end, Body body){
+        this.varname = varname;
+        this.start = start;
+        this.end = end;
+        this.body = body;
+    }
+}
+
 class If:IStatement{
     public IExpression condition;
     public Body body;
@@ -99,6 +113,14 @@ class Var:IStatement{
 }
 
 class Break:IStatement{
+}
+
+class Return:IStatement{
+    public IExpression expression;
+
+    public Return(IExpression expression){
+        this.expression = expression;
+    }
 }
 
 class Body:INode{
