@@ -6,7 +6,6 @@ using System.Reflection;
 
 enum ControlFlow{None, Break, Continue, Return}
 
-
 class VariableInstance{
     public dynamic value;
 
@@ -45,19 +44,13 @@ class FunctionInstance{
         value = null;
         return false;
     }
-
-    public dynamic GetValue(string name){
-        if(TryGetValue(name, out VariableInstance value)){
-            return value.value;
-        }
-        throw new Exception("Cant find variable with name: "+name);
-    }
 }
 
 class TreeWalker{
     readonly Tree tree;
     ControlFlow controlFlow = ControlFlow.None;
     readonly Stack<FunctionInstance> funcStack = new();
+    readonly Dictionary<string, VariableInstance> globals = new();
     readonly object module;
     readonly Type[] importTypes;
 
@@ -73,6 +66,16 @@ class TreeWalker{
         this.tree = tree;
         this.module = module;
         this.importTypes = importTypes;
+    }
+
+    dynamic GetVariable(string name){
+        if(funcStack.Peek().TryGetValue(name, out VariableInstance varInstance)){
+            return varInstance.value;
+        }
+        if(globals.TryGetValue(name, out VariableInstance globalInstance)){
+            return globalInstance.value;
+        }
+        throw new Exception("Expecting variable with name: "+name);
     }
 
     public dynamic Invoke(string name, params dynamic[] args){
@@ -128,9 +131,17 @@ class TreeWalker{
             funcStack.Peek().Add(var.name.value, Run(var.value));
             return null;
         }
+        if(node is Global global){
+            globals.Add(global.name.value, new VariableInstance(Run(global.value)));
+            return null;
+        }
         if(node is Assign assign){
-            funcStack.Peek().TryGetValue(assign.name.value, out VariableInstance varInstance);
-            varInstance.value = Run(assign.value);
+            if(funcStack.Peek().TryGetValue(assign.name.value, out VariableInstance varInstance)){
+                varInstance.value = Run(assign.value);
+            }
+            else if(globals.TryGetValue(assign.name.value, out VariableInstance globalInstance)){
+                globalInstance.value = Run(assign.value);
+            }
             return null;
         }
         if(node is While @while){
@@ -197,7 +208,7 @@ class TreeWalker{
         }
         if(node is Indexor indexor){
             var index = Run(indexor.indexExpression);
-            return funcStack.Peek().GetValue(indexor.varname.value)[index];
+            return GetVariable(indexor.varname.value)[index];
         }
         if(node is UnaryOp unaryOp){
             if(unaryOp.op.type == TokenType.Minus){
@@ -238,7 +249,7 @@ class TreeWalker{
                 LiteralType.Int => int.Parse(literal.value.value),
                 LiteralType.String => literal.value.value,
                 LiteralType.Char => literal.value.value[0],
-                LiteralType.Variable => funcStack.Peek().GetValue(literal.value.value),
+                LiteralType.Variable => GetVariable(literal.value.value),
                 LiteralType.True => true,
                 LiteralType.False => false,
                 _ => throw new Exception("Unexpected literaltype: " + literal.type.ToString()),

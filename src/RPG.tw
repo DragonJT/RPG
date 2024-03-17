@@ -1,7 +1,12 @@
 
-Main(){
+Ready(){
     AddCamera(Vector3(4,4,4),Vector3(0,0,0));
     AddLight(Vector3(-5,5,5), Vector3(0,0,0));
-    AddBox(Vector3(0,0,0), Vector3(1,1,0.5), Color(1,0,0,1));
-    AddBox(Vector3(2,2,0), Vector3(1,1,1), Color(0,0,1,1));
+    global box1 = AddBox(Vector3(0,0,0), Vector3(1,1,0.5), Color(1,0,0,1));
+    global box2 = AddBox(Vector3(2,2,0), Vector3(1,1,1), Color(0,0,1,1));
+}
+
+Input(event){
+    Translate(box1, Vector3(-0.1,0,0));
+    Translate(box2, Vector3(0.05,0,0));
 }

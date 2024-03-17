@@ -130,6 +130,16 @@ class Var:IStatement{
     }
 }
 
+class Global:IStatement{
+    public Token name;
+    public IExpression value;
+
+    public Global(Token name, IExpression value){
+        this.name = name;
+        this.value = value;
+    }
+}
+
 class Break:IStatement{
 }
 

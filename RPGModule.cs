@@ -7,7 +7,7 @@ class RPGModule{
         this.node = node;
     }
 
-    public void AddBox(Vector3 position, Vector3 size, Color color){
+    public CsgBox3D AddBox(Vector3 position, Vector3 size, Color color){
         var box = new CsgBox3D();
         node.AddChild(box);
         box.Position = position;
@@ -16,18 +16,24 @@ class RPGModule{
             AlbedoColor = color
         };
         box.Material = material;
+        return box;
     }
 
-    public void AddLight(Vector3 position, Vector3 lookAt){
+    public DirectionalLight3D AddLight(Vector3 position, Vector3 lookAt){
         var light = new DirectionalLight3D();
         node.AddChild(light);
         light.LookAtFromPosition(position, lookAt);
+        return light;
     }
 
-    public void AddCamera(Vector3 position, Vector3 lookAt){
+    public Camera3D AddCamera(Vector3 position, Vector3 lookAt){
         var camera = new Camera3D();
         node.AddChild(camera);
         camera.LookAtFromPosition(position, lookAt);
+        return camera;
+    }
 
+    public void Translate(CsgBox3D box, Vector3 delta){
+        box.Position+=delta;
     }
 }

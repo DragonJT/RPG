@@ -128,6 +128,9 @@ static class Parser{
             else if(s[0].type == TokenType.Var){
                 statements.Add(new Var(s[1], ParseExpression(s.GetRange(3, s.Count-3))));
             }
+            else if(s[0].type == TokenType.Global){
+                statements.Add(new Global(s[1], ParseExpression(s.GetRange(3, s.Count-3))));
+            }
             else if(s[0].type == TokenType.While){
                 statements.Add(new While(ParseExpression(Tokenizer.Tokenize(s[1].value)), ParseBody(s[2].value)));
             }
