@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 using Godot;
+using System.Reflection;
 
 enum ControlFlow{None, Break, Continue, Return}
 
@@ -55,14 +56,20 @@ class FunctionInstance{
 
 class TreeWalker{
     readonly Tree tree;
-    readonly Control control;
-    float y = 0;
     ControlFlow controlFlow = ControlFlow.None;
     readonly Stack<FunctionInstance> funcStack = new();
+    readonly object module;
 
-    public TreeWalker(Tree tree, Control control){
+    public TreeWalker(string path, object module){
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+        string code = file.GetAsText();
+        tree = Parser.ParseTree(code);
+        this.module = module;
+    }
+
+    public TreeWalker(Tree tree, object module){
         this.tree = tree;
-        this.control = control;
+        this.module = module;
     }
 
     public dynamic Invoke(string name, params dynamic[] args){
@@ -73,22 +80,16 @@ class TreeWalker{
         else if(name == "Length"){
             return args[0].Length;
         }
-        else if(name == "AddH2"){
-            var h2 = new RichTextLabel();
-            control.AddChild(h2);
-            var fontSize = 100;
-            h2.Text = args[0];
-            var theme = new Theme
-            {
-                DefaultFontSize = fontSize
-            };
-            h2.Theme = theme;
-            h2.Position = new Vector2(100, y);
-            h2.Size = new Vector2(1500, fontSize*1.5f);
-            y+=fontSize*1.5f;
-            return null;
+        var methods = module.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
+        var method = methods.FirstOrDefault(m=>m.Name == name);
+        if(method!=null){
+            return method.Invoke(module, args);
         }
-        var function = tree.functions.First(t=>t.name.value == name);
+
+        var function = tree.functions.FirstOrDefault(t=>t.name.value == name);
+        if(function==null){
+            throw new Exception("Cant find function with name: "+name);
+        }
         var funcInstance = new FunctionInstance();
         funcStack.Push(funcInstance);
         for(var i=0;i<args.Length;i++){

@@ -1,0 +1,6 @@
+
+Main(){
+    AddCamera(4,4,4,0,0,0);
+    AddBox(0,0,0);
+    AddBox(1,1,0.5);
+}
