@@ -1,23 +1,33 @@
 using Godot;
 
 class RPGModule{
-    Node3D node;
+    readonly Node3D node;
 
     public RPGModule(Node3D node){
         this.node = node;
     }
 
-    public void AddBox(float x, float y, float z){
+    public void AddBox(Vector3 position, Vector3 size, Color color){
         var box = new CsgBox3D();
         node.AddChild(box);
-        box.Position = new Vector3(x,y,z);
-        box.Size = new Vector3(1,1,1);
+        box.Position = position;
+        box.Size = size;
+        var material = new StandardMaterial3D{
+            AlbedoColor = color
+        };
+        box.Material = material;
     }
 
-    public void AddCamera(float x, float y, float z, float lx, float ly, float lz){
+    public void AddLight(Vector3 position, Vector3 lookAt){
+        var light = new DirectionalLight3D();
+        node.AddChild(light);
+        light.LookAtFromPosition(position, lookAt);
+    }
+
+    public void AddCamera(Vector3 position, Vector3 lookAt){
         var camera = new Camera3D();
         node.AddChild(camera);
-        camera.Position = new Vector3(x,y,z);
-        camera.LookAt(new Vector3(lx,ly,lz));
+        camera.LookAtFromPosition(position, lookAt);
+
     }
 }

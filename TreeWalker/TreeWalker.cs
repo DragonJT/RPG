@@ -59,20 +59,43 @@ class TreeWalker{
     ControlFlow controlFlow = ControlFlow.None;
     readonly Stack<FunctionInstance> funcStack = new();
     readonly object module;
+    readonly Type[] importTypes;
 
-    public TreeWalker(string path, object module){
+    public TreeWalker(string path, object module, params Type[] importTypes){
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
         string code = file.GetAsText();
         tree = Parser.ParseTree(code);
         this.module = module;
+        this.importTypes = importTypes;
     }
 
-    public TreeWalker(Tree tree, object module){
+    public TreeWalker(Tree tree, object module, params Type[] importTypes){
         this.tree = tree;
         this.module = module;
+        this.importTypes = importTypes;
     }
 
     public dynamic Invoke(string name, params dynamic[] args){
+        var function = tree.functions.FirstOrDefault(t=>t.name.value == name);
+        if(function!=null){
+            var funcInstance = new FunctionInstance();
+            funcStack.Push(funcInstance);
+            for(var i=0;i<args.Length;i++){
+                funcInstance.Add(function.parameters[i].name.value, args[i]);
+            }
+            var returnValue = Run(function.body);
+            funcStack.Pop();
+            controlFlow = ControlFlow.None;
+            return returnValue;
+        }
+
+        var type = importTypes.FirstOrDefault(t=>t.Name == name);
+        if(type!=null){
+            var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+            var constructor = constructors.FirstOrDefault(c=>c.GetParameters().Length == args.Length);
+            return constructor.Invoke(args);
+        }
+
         if(name == "Print"){
             GD.Print(args[0].ToString());
             return null;
@@ -85,20 +108,7 @@ class TreeWalker{
         if(method!=null){
             return method.Invoke(module, args);
         }
-
-        var function = tree.functions.FirstOrDefault(t=>t.name.value == name);
-        if(function==null){
-            throw new Exception("Cant find function with name: "+name);
-        }
-        var funcInstance = new FunctionInstance();
-        funcStack.Push(funcInstance);
-        for(var i=0;i<args.Length;i++){
-            funcInstance.Add(function.parameters[i].name.value, args[i]);
-        }
-        var returnValue = Run(function.body);
-        funcStack.Pop();
-        controlFlow = ControlFlow.None;
-        return returnValue;
+        throw new Exception("Cant find function or type with name: "+name);
     }
 
     public dynamic Run(INode node){
