@@ -92,7 +92,20 @@ class TreeWalker{
         throw new Exception("Expecting variable with name: "+name);
     }
 
-    public dynamic InvokeNew(string name, params dynamic[] args){
+    dynamic Assign(IExpression left, IExpression right){
+        if(left is Literal literal && literal.type == LiteralType.Variable){
+            if(funcStack.Peek().TryGetValue(literal.value.value, out VariableInstance varInstance)){
+                varInstance.value = Run(right);
+            }
+            else if(globals.TryGetValue(literal.value.value, out VariableInstance globalInstance)){
+                globalInstance.value = Run(right);
+            }
+            return null;
+        }
+        throw new Exception("cant assign to: "+left.ToString());        
+    }
+
+    dynamic InvokeNew(string name, params dynamic[] args){
         if(allTypes.TryGetValue(name, out List<Type> types)){
             var finalTypes = types.Where(t=>t.DeclaringType == null && (t.Namespace == null || UsingsContains(t.Namespace))).ToArray();
             if(finalTypes.Length == 1){
@@ -160,15 +173,6 @@ class TreeWalker{
         }
         if(node is Global global){
             globals.Add(global.name.value, new VariableInstance(Run(global.value)));
-            return null;
-        }
-        if(node is Assign assign){
-            if(funcStack.Peek().TryGetValue(assign.name.value, out VariableInstance varInstance)){
-                varInstance.value = Run(assign.value);
-            }
-            else if(globals.TryGetValue(assign.name.value, out VariableInstance globalInstance)){
-                globalInstance.value = Run(assign.value);
-            }
             return null;
         }
         if(node is While @while){
@@ -261,6 +265,7 @@ class TreeWalker{
             var right = binaryOp.right;
             var returnValue = binaryOp.op.value switch
             {
+                "=" => Assign(left, right),
                 "+" => Run(left) + Run(right),
                 "-" => Run(left) - Run(right),
                 "*" => Run(left) * Run(right),

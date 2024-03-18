@@ -28,8 +28,8 @@ static class Parser{
     }
 
     static IExpression ParseSubExpression(List<Token> tokens){
-        var operators = new string[][]{ new string[]{"&&", "||"}, new string[]{">=", "<=", "==", "!="},
-            new string[]{"<", ">"}, new string[]{"+", "-"}, new string[]{"/", "*"}};
+        var operators = new string[][]{ new string[]{"="}, new string[]{"&&", "||"}, new string[]{">=", "<=", "==", "!="},
+            new string[]{"<", ">"}, new string[]{"+", "-"}, new string[]{"/", "*"}, new string[]{"."}};
         if(tokens.Count == 0){
             throw new Exception("No tokens");
         }
@@ -126,10 +126,7 @@ static class Parser{
         List<IStatement> statements = new();
         for(var i=0;i<statementTokens.Count;i++){
             var s = statementTokens[i];
-            if(s.Count>1 && s[1].type == TokenType.Equals){
-                statements.Add(new Assign(s[0], ParseExpression(s.GetRange(2, s.Count-2))));
-            }
-            else if(s[0].type == TokenType.Var){
+            if(s[0].type == TokenType.Var){
                 statements.Add(new Var(s[1], ParseExpression(s.GetRange(3, s.Count-3))));
             }
             else if(s[0].type == TokenType.Global){

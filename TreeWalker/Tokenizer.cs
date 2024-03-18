@@ -34,14 +34,14 @@ static class Tokenizer{
         var open = "({[";
         var close = ")}]";
         var specialLiterals = new Dictionary<char, TokenType> {
-             {'=', TokenType.Equals}, {';', TokenType.SemiColon}, {',', TokenType.Comma}, {'-', TokenType.Minus}
+             {';', TokenType.SemiColon}, {',', TokenType.Comma}, {'-', TokenType.Minus}
         };
         var varnameLiterals = new Dictionary<string, TokenType>{
             {"var", TokenType.Var}, {"global", TokenType.Global}, {"while", TokenType.While}, {"if", TokenType.If}, 
             {"break", TokenType.Break}, {"true", TokenType.True}, {"false", TokenType.False}, {"return", TokenType.Return},
             {"for", TokenType.For}, {"using", TokenType.Using }, {"new", TokenType.New}
         };
-        var operators = "+*/<>!";
+        var operators = "+*/<>!=.";
         var operators2 = new string[]{"==", ">=", "<=", "!=", "&&", "||"};
 
         loop:

@@ -94,16 +94,6 @@ class Indexor:IExpression{
     }
 }
 
-class Assign:IStatement{
-    public Token name;
-    public IExpression value;
-
-    public Assign(Token name, IExpression value){
-        this.name = name;
-        this.value = value;
-    }
-}
-
 class While:IStatement{
     public IExpression condition;
     public Body body;
