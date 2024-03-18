@@ -54,15 +54,33 @@ class UnaryOp:IExpression{
     }
 }
 
-interface IStatement:INode{}
-
-class Call:IExpression, IStatement{
+class Call:IExpression{
     public Token name;
     public IExpression[] args;
 
     public Call(Token name, IExpression[] args){
         this.name = name;
         this.args = args;
+    }
+}
+
+class New:IExpression{
+    public Token name;
+    public IExpression[] args;
+
+    public New(Token name, IExpression[] args){
+        this.name = name;
+        this.args = args;
+    }
+}
+
+interface IStatement:INode{}
+
+class Expression:IStatement{
+    public IExpression expression;
+
+    public Expression(IExpression expression){
+        this.expression = expression;
     }
 }
 

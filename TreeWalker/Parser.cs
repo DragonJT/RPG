@@ -70,6 +70,11 @@ static class Parser{
                 return new Indexor(tokens[0], ParseSubExpression(Tokenizer.Tokenize(tokens[1].value)));
             }
         }
+        else if(tokens.Count == 3){
+            if(tokens[0].type == TokenType.New && tokens[1].type == TokenType.Varname && tokens[2].type == TokenType.Parens){
+                return new New(tokens[1], ParseArgs(tokens[2]));
+            }
+        }
         foreach(var ops in operators){
             var index = tokens.FindLastIndex(t=>t.type == TokenType.Operator && ops.Contains(t.value));
             if(index>=0){
@@ -151,11 +156,8 @@ static class Parser{
                     statements.Add(new Return(ParseExpression(s.GetRange(1, s.Count-1))));
                 }
             }
-            else if(s[0].type == TokenType.Varname && s[1].type == TokenType.Parens){
-                statements.Add(new Call(s[0], ParseArgs(s[1])));
-            }
             else{
-                throw new Exception("SyntaxError: Unexpected statement: "+s[0].value);
+                statements.Add(new Expression(ParseExpression(s)));
             }
         }
         return new Body(statements);

@@ -92,6 +92,26 @@ class TreeWalker{
         throw new Exception("Expecting variable with name: "+name);
     }
 
+    public dynamic InvokeNew(string name, params dynamic[] args){
+        if(allTypes.TryGetValue(name, out List<Type> types)){
+            var finalTypes = types.Where(t=>t.DeclaringType == null && (t.Namespace == null || UsingsContains(t.Namespace))).ToArray();
+            if(finalTypes.Length == 1){
+                var constructors = finalTypes[0].GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+                var constructor = constructors.FirstOrDefault(c=>c.GetParameters().Length == args.Length);
+                return constructor.Invoke(args);
+            }
+            else{
+                if(finalTypes.Length == 0){
+                    throw new Exception("Cnat find type with name: "+name+". Are you missing a using");
+                }
+                else{
+                    throw new Exception("More than 1 available type: "+new string(finalTypes.SelectMany(t=>t.FullName+", ").ToArray()));
+                }
+            }
+        }
+        throw new Exception("Cant find type with name: "+name);
+    }
+
     public dynamic Invoke(string name, params dynamic[] args){
         var function = tree.functions.FirstOrDefault(t=>t.name.value == name);
         if(function!=null){
@@ -106,23 +126,6 @@ class TreeWalker{
             return returnValue;
         }
 
-        if(allTypes.TryGetValue(name, out List<Type> types)){
-            var finalTypes = types.Where(t=>t.DeclaringType == null && (t.Namespace == null || UsingsContains(t.Namespace))).ToArray();
-            if(finalTypes.Length == 1){
-                var constructors = finalTypes[0].GetConstructors(BindingFlags.Public | BindingFlags.Instance);
-                var constructor = constructors.FirstOrDefault(c=>c.GetParameters().Length == args.Length);
-                return constructor.Invoke(args);
-            }
-            else{
-                if(finalTypes.Length == 0){
-                    throw new Exception("Type "+name+" not found");
-                }
-                else{
-                    throw new Exception("More than 1 available type: "+new string(finalTypes.SelectMany(t=>t.FullName+", ").ToArray()));
-                }
-            }
-        }
-
         if(name == "Print"){
             GD.Print(args[0].ToString());
             return null;
@@ -135,7 +138,7 @@ class TreeWalker{
         if(method!=null){
             return method.Invoke(module, args);
         }
-        throw new Exception("Cant find function or type with name: "+name);
+        throw new Exception("Cant find function with name: "+name);
     }
 
     public dynamic Run(INode node){
@@ -229,6 +232,14 @@ class TreeWalker{
         if(node is Call call){
             var args = call.args.Select(a=>Run(a)).ToArray();
             return Invoke(call.name.value, args);
+        }
+        if(node is New @new){
+            var args = @new.args.Select(a=>Run(a)).ToArray();
+            return InvokeNew(@new.name.value, args);
+        }
+        if(node is Expression expression){
+            Run(expression.expression);
+            return null;
         }
         if(node is Indexor indexor){
             var index = Run(indexor.indexExpression);
