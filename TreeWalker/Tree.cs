@@ -172,9 +172,19 @@ class Function{
 }
 
 class Tree{
+    public List<Using> usings;
     public List<Function> functions;
 
-    public Tree(List<Function> functions){
+    public Tree(List<Using> usings, List<Function> functions){
+        this.usings = usings;
         this.functions = functions;
+    }
+}
+
+class Using{
+    public List<Token> tokens;
+
+    public Using(List<Token> tokens){
+        this.tokens = tokens;
     }
 }

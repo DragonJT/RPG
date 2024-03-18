@@ -5,8 +5,10 @@ public partial class RPG : Node3D{
     TreeWalker treeWalker;
 
     public override void _Ready(){
-        var importTypes = new Type[]{typeof(Vector3), typeof(Color)};
-        treeWalker = new TreeWalker("src/RPG.tw", new RPGModule(this), importTypes);
+        using var file = FileAccess.Open("src/RPG.tw", FileAccess.ModeFlags.Read);
+        string code = file.GetAsText();
+        var tree = Parser.ParseTree(code);
+        treeWalker = new TreeWalker(tree, new RPGModule(this));
         treeWalker.Invoke("Ready");
     }
 

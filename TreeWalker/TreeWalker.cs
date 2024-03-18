@@ -51,21 +51,35 @@ class TreeWalker{
     ControlFlow controlFlow = ControlFlow.None;
     readonly Stack<FunctionInstance> funcStack = new();
     readonly Dictionary<string, VariableInstance> globals = new();
+    readonly Dictionary<string, List<Type>> allTypes = new(); 
     readonly object module;
-    readonly Type[] importTypes;
 
-    public TreeWalker(string path, object module, params Type[] importTypes){
-        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
-        string code = file.GetAsText();
-        tree = Parser.ParseTree(code);
-        this.module = module;
-        this.importTypes = importTypes;
-    }
-
-    public TreeWalker(Tree tree, object module, params Type[] importTypes){
+    public TreeWalker(Tree tree, object module){
         this.tree = tree;
         this.module = module;
-        this.importTypes = importTypes;
+        foreach(var a in AppDomain.CurrentDomain.GetAssemblies()){
+            foreach(var t in a.GetTypes()){
+                if(allTypes.TryGetValue(t.Name, out List<Type> types)){
+                    types.Add(t);
+                }
+                else{
+                    allTypes.Add(t.Name, new List<Type>{t});
+                }
+            }
+        }
+    }
+
+    bool UsingsContains(string @namespace){
+        foreach(var u in tree.usings){
+            var name = "";
+            foreach(var token in u.tokens){
+                name+=token.value;
+            }
+            if(name == @namespace){
+                return true;
+            }
+        }
+        return false;
     }
 
     dynamic GetVariable(string name){
@@ -92,11 +106,21 @@ class TreeWalker{
             return returnValue;
         }
 
-        var type = importTypes.FirstOrDefault(t=>t.Name == name);
-        if(type!=null){
-            var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
-            var constructor = constructors.FirstOrDefault(c=>c.GetParameters().Length == args.Length);
-            return constructor.Invoke(args);
+        if(allTypes.TryGetValue(name, out List<Type> types)){
+            var finalTypes = types.Where(t=>t.DeclaringType == null && (t.Namespace == null || UsingsContains(t.Namespace))).ToArray();
+            if(finalTypes.Length == 1){
+                var constructors = finalTypes[0].GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+                var constructor = constructors.FirstOrDefault(c=>c.GetParameters().Length == args.Length);
+                return constructor.Invoke(args);
+            }
+            else{
+                if(finalTypes.Length == 0){
+                    throw new Exception("Type "+name+" not found");
+                }
+                else{
+                    throw new Exception("More than 1 available type: "+new string(finalTypes.SelectMany(t=>t.FullName+", ").ToArray()));
+                }
+            }
         }
 
         if(name == "Print"){

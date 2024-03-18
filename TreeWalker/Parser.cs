@@ -100,7 +100,7 @@ static class Parser{
         return ParseSubExpression(tokens);
     }
 
-    static List<List<Token>> SplitIntoStatements(List<Token> tokens){
+    static List<List<Token>> SplitIntoGroups(List<Token> tokens){
         var output = new List<List<Token>>();
         var start = 0;
         for(var i=0;i<tokens.Count;i++){
@@ -113,14 +113,13 @@ static class Parser{
                 start=i+1;
             }
         }
-        output.Add(tokens.GetRange(start, tokens.Count-start));
         return output;
     }
 
     static Body ParseBody(string code){
-        var statementTokens = SplitIntoStatements(Tokenizer.Tokenize(code));
+        var statementTokens = SplitIntoGroups(Tokenizer.Tokenize(code));
         List<IStatement> statements = new();
-        for(var i=0;i<statementTokens.Count-1;i++){
+        for(var i=0;i<statementTokens.Count;i++){
             var s = statementTokens[i];
             if(s.Count>1 && s[1].type == TokenType.Equals){
                 statements.Add(new Assign(s[0], ParseExpression(s.GetRange(2, s.Count-2))));
@@ -168,17 +167,21 @@ static class Parser{
     }
 
     public static Tree ParseTree(string code){
-        var tokens = Tokenizer.Tokenize(code);
+        var tokenGroups = SplitIntoGroups(Tokenizer.Tokenize(code));
+        var usings = new List<Using>();
         var functions = new List<Function>();
-        var i = 0;
-        while(true){
-            if(i>=tokens.Count){
-                return new Tree(functions);
+        
+        foreach(var tokens in tokenGroups){
+            if(tokens[0].type == TokenType.Using){
+                usings.Add(new Using(tokens.GetRange(1, tokens.Count-1)));
             }
-            var name = tokens[i];
-            var parameters = ParseParameters(tokens[i+1].value);
-            functions.Add(new Function(name, parameters, ParseBody(tokens[i+2].value)));
-            i+=3;
+            else{
+                var name = tokens[0];
+                var parameters = ParseParameters(tokens[1].value);
+                functions.Add(new Function(name, parameters, ParseBody(tokens[2].value)));
+            }
         }
+
+        return new Tree(usings, functions);
     }
 }
