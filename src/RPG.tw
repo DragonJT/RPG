@@ -1,6 +1,7 @@
 using Godot;
 
 Ready(){
+    GD.Print("HelloWorld");
     AddCamera(new Vector3(4,4,4), new Vector3(0,0,0));
     AddLight(new Vector3(-5,5,5), new Vector3(0,0,0));
     global box1 = AddBox(new Vector3(0,0,0), new Vector3(1,1,0.5), new Color(1,0,0,1));

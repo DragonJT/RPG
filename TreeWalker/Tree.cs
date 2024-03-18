@@ -13,7 +13,7 @@ interface INode{}
 
 interface IExpression:INode{}
 
-enum LiteralType{Float, Int, String, Char, Variable, True, False}
+enum LiteralType{Float, Int, String, Char, Varname, True, False}
 class Literal:IExpression{
     public LiteralType type;
     public Token value;

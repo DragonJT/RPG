@@ -93,7 +93,7 @@ class TreeWalker{
     }
 
     dynamic Assign(IExpression left, IExpression right){
-        if(left is Literal literal && literal.type == LiteralType.Variable){
+        if(left is Literal literal && literal.type == LiteralType.Varname){
             if(funcStack.Peek().TryGetValue(literal.value.value, out VariableInstance varInstance)){
                 varInstance.value = Run(right);
             }
@@ -105,13 +105,11 @@ class TreeWalker{
         throw new Exception("cant assign to: "+left.ToString());        
     }
 
-    dynamic InvokeNew(string name, params dynamic[] args){
+    Type FindType(string name){
         if(allTypes.TryGetValue(name, out List<Type> types)){
             var finalTypes = types.Where(t=>t.DeclaringType == null && (t.Namespace == null || UsingsContains(t.Namespace))).ToArray();
             if(finalTypes.Length == 1){
-                var constructors = finalTypes[0].GetConstructors(BindingFlags.Public | BindingFlags.Instance);
-                var constructor = constructors.FirstOrDefault(c=>c.GetParameters().Length == args.Length);
-                return constructor.Invoke(args);
+                return finalTypes[0];
             }
             else{
                 if(finalTypes.Length == 0){
@@ -123,6 +121,52 @@ class TreeWalker{
             }
         }
         throw new Exception("Cant find type with name: "+name);
+    }
+
+    dynamic[] RunArgs(Call call){
+        return call.args.Select(a=>Run(a)).ToArray();
+    }
+
+    static bool MatchingArgsAndParameters(ParameterInfo[] parameters, dynamic[] args){
+        if(parameters.Length != args.Length){
+            return false;
+        }
+        for(var i=0;i<parameters.Length;i++){
+            if((Type)args[i].GetType() != parameters[i].ParameterType){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    dynamic Dot(IExpression left, IExpression right){
+        if(left is Literal literal && literal.type == LiteralType.Varname){
+            var type = FindType(literal.value.value);
+            if(right is Call call){
+                var args = RunArgs(call);
+                var methods = type.GetMethods(BindingFlags.Static|BindingFlags.Public)
+                    .Where(m=>m.Name == call.name.value)
+                    .Where(m=>MatchingArgsAndParameters(m.GetParameters(), args))
+                    .ToArray();
+                if(methods.Length > 0){
+                    return methods[0].Invoke(null, args);
+                }
+                throw new Exception("No method with name and matching args "+call.name.value);
+            }
+            else{
+                throw new NotImplementedException();
+            }
+        }
+        else{
+            throw new NotImplementedException();
+        }
+    }
+
+    dynamic InvokeNew(string name, params dynamic[] args){
+        var type = FindType(name);
+        var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+        var constructor = constructors.FirstOrDefault(c=>c.GetParameters().Length == args.Length);
+        return constructor.Invoke(args);
     }
 
     public dynamic Invoke(string name, params dynamic[] args){
@@ -139,11 +183,7 @@ class TreeWalker{
             return returnValue;
         }
 
-        if(name == "Print"){
-            GD.Print(args[0].ToString());
-            return null;
-        }
-        else if(name == "Length"){
+        if(name == "Length"){
             return args[0].Length;
         }
         var methods = module.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
@@ -234,8 +274,7 @@ class TreeWalker{
             }
         }
         if(node is Call call){
-            var args = call.args.Select(a=>Run(a)).ToArray();
-            return Invoke(call.name.value, args);
+            return Invoke(call.name.value, RunArgs(call));
         }
         if(node is New @new){
             var args = @new.args.Select(a=>Run(a)).ToArray();
@@ -265,6 +304,7 @@ class TreeWalker{
             var right = binaryOp.right;
             var returnValue = binaryOp.op.value switch
             {
+                "." => Dot(left, right),
                 "=" => Assign(left, right),
                 "+" => Run(left) + Run(right),
                 "-" => Run(left) - Run(right),
@@ -289,7 +329,7 @@ class TreeWalker{
                 LiteralType.Int => int.Parse(literal.value.value),
                 LiteralType.String => literal.value.value,
                 LiteralType.Char => literal.value.value[0],
-                LiteralType.Variable => GetVariable(literal.value.value),
+                LiteralType.Varname => GetVariable(literal.value.value),
                 LiteralType.True => true,
                 LiteralType.False => false,
                 _ => throw new Exception("Unexpected literaltype: " + literal.type.ToString()),

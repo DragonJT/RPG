@@ -50,7 +50,7 @@ static class Parser{
                 return new Literal(LiteralType.Char, tokens[0]);
             }
             else if(tokens[0].type == TokenType.Varname){
-                return new Literal(LiteralType.Variable, tokens[0]);
+                return new Literal(LiteralType.Varname, tokens[0]);
             }
             else if(tokens[0].type == TokenType.True){
                 return new Literal(LiteralType.True, tokens[0]);
