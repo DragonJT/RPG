@@ -8,7 +8,7 @@ public partial class RPG : Node3D{
         using var file = FileAccess.Open("src/RPG.tw", FileAccess.ModeFlags.Read);
         string code = file.GetAsText();
         var tree = Parser.ParseTree(code);
-        treeWalker = new TreeWalker(tree, new RPGModule(this));
+        treeWalker = new TreeWalker(tree, this);
         treeWalker.Invoke("Ready");
     }
 

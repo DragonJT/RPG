@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using Godot;
 using System.Reflection;
+using System.Threading;
 
 enum ControlFlow{None, Break, Continue, Return}
 
@@ -52,11 +53,10 @@ class TreeWalker{
     readonly Stack<FunctionInstance> funcStack = new();
     readonly Dictionary<string, VariableInstance> globals = new();
     readonly Dictionary<string, List<Type>> allTypes = new(); 
-    readonly object module;
 
-    public TreeWalker(Tree tree, object module){
+    public TreeWalker(Tree tree, object node){
         this.tree = tree;
-        this.module = module;
+        globals.Add("node", new VariableInstance(node));
         foreach(var a in AppDomain.CurrentDomain.GetAssemblies()){
             foreach(var t in a.GetTypes()){
                 if(allTypes.TryGetValue(t.Name, out List<Type> types)){
@@ -82,14 +82,21 @@ class TreeWalker{
         return false;
     }
 
-    dynamic GetVariable(string name){
-        if(funcStack.Peek().TryGetValue(name, out VariableInstance varInstance)){
+    bool FindVariable(string name, out VariableInstance varInstance){
+        if(funcStack.Peek().TryGetValue(name, out varInstance)){
+            return true;
+        }
+        if(globals.TryGetValue(name, out varInstance)){
+            return true;
+        }
+        return false;
+    }
+
+    dynamic FindVariable(string name){
+        if(FindVariable(name, out VariableInstance varInstance)){
             return varInstance.value;
         }
-        if(globals.TryGetValue(name, out VariableInstance globalInstance)){
-            return globalInstance.value;
-        }
-        throw new Exception("Expecting variable with name: "+name);
+        throw new Exception("Error cant find variable with name: "+name);
     }
 
     dynamic Assign(IExpression left, IExpression right){
@@ -101,6 +108,25 @@ class TreeWalker{
                 globalInstance.value = Run(right);
             }
             return null;
+        }
+        if(left is BinaryOp binaryOp && binaryOp.op.value == "."){
+            if(binaryOp.left is Literal literalLeft){
+                if(FindVariable(literalLeft.value.value, out VariableInstance varInstance)){
+                    var type = (Type)varInstance.value.GetType();
+                    if(binaryOp.right is Literal literalRight){
+                        var property = type.GetProperty(literalRight.value.value);
+                        property.SetValue(varInstance.value, Run(right));
+                        return null;
+                    }
+                    else{
+                        throw new NotImplementedException();
+                    }
+                }
+                else{
+                    throw new NotImplementedException();
+                }
+            }
+            
         }
         throw new Exception("cant assign to: "+left.ToString());        
     }
@@ -128,33 +154,73 @@ class TreeWalker{
     }
 
     static bool MatchingArgsAndParameters(ParameterInfo[] parameters, dynamic[] args){
-        if(parameters.Length != args.Length){
+        if(parameters.Length < args.Length){
             return false;
         }
         for(var i=0;i<parameters.Length;i++){
-            if((Type)args[i].GetType() != parameters[i].ParameterType){
-                return false;
+            if(parameters[i].DefaultValue == DBNull.Value){
+                if(i>=args.Length){
+                    return false;
+                }
+                if(!parameters[i].ParameterType.IsAssignableFrom((Type)args[i].GetType())){
+                    return false;
+                }
+            }
+            else{
+                if(i<args.Length && !parameters[i].ParameterType.IsAssignableFrom((Type)args[i].GetType())){
+                    return false;
+                }
             }
         }
         return true;
     }
 
+    MethodInfo FindMethodInHierarchy(Type type, dynamic instance, string name, dynamic[] args){
+        var flags = instance==null?
+            BindingFlags.Static|BindingFlags.Public:
+            BindingFlags.Instance|BindingFlags.Public;
+        var methods = type.GetMethods(flags)
+                .Where(m=>m.Name == name)
+                .Where(m=>MatchingArgsAndParameters(m.GetParameters(), args))
+                .ToArray();
+        if(methods.Length > 0){
+            return methods[0];
+        }
+        if(type.BaseType!=null){
+            return FindMethodInHierarchy(type.BaseType, instance, name, args);
+        }
+        throw new Exception("Cant find method with name in type or basetype: ");
+    }
+
+    dynamic TypeDot(IExpression right, Type type, dynamic instance){
+        if(right is Call call){
+            var args = RunArgs(call);
+            var method = FindMethodInHierarchy(type, instance, call.name.value, args);
+            List<dynamic> finalArgs = new();
+            var parameters = method.GetParameters();
+            for(var i=0;i<parameters.Length;i++){
+                if(i<args.Length){
+                    finalArgs.Add(args[i]);
+                }
+                else{
+                    finalArgs.Add(parameters[i].DefaultValue);
+                }
+            }
+            return method.Invoke(instance, finalArgs.ToArray());
+        }
+        else{
+            throw new NotImplementedException();
+        }
+    }
+
     dynamic Dot(IExpression left, IExpression right){
         if(left is Literal literal && literal.type == LiteralType.Varname){
-            var type = FindType(literal.value.value);
-            if(right is Call call){
-                var args = RunArgs(call);
-                var methods = type.GetMethods(BindingFlags.Static|BindingFlags.Public)
-                    .Where(m=>m.Name == call.name.value)
-                    .Where(m=>MatchingArgsAndParameters(m.GetParameters(), args))
-                    .ToArray();
-                if(methods.Length > 0){
-                    return methods[0].Invoke(null, args);
-                }
-                throw new Exception("No method with name and matching args "+call.name.value);
+            var name = literal.value.value;
+            if(FindVariable(name, out VariableInstance varInstance)){
+                return TypeDot(right, (Type)varInstance.value.GetType(), varInstance.value);
             }
             else{
-                throw new NotImplementedException();
+                return TypeDot(right, FindType(name), null);
             }
         }
         else{
@@ -181,15 +247,6 @@ class TreeWalker{
             funcStack.Pop();
             controlFlow = ControlFlow.None;
             return returnValue;
-        }
-
-        if(name == "Length"){
-            return args[0].Length;
-        }
-        var methods = module.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
-        var method = methods.FirstOrDefault(m=>m.Name == name);
-        if(method!=null){
-            return method.Invoke(module, args);
         }
         throw new Exception("Cant find function with name: "+name);
     }
@@ -286,7 +343,7 @@ class TreeWalker{
         }
         if(node is Indexor indexor){
             var index = Run(indexor.indexExpression);
-            return GetVariable(indexor.varname.value)[index];
+            return FindVariable(indexor.varname.value)[index];
         }
         if(node is UnaryOp unaryOp){
             if(unaryOp.op.type == TokenType.Minus){
@@ -329,7 +386,7 @@ class TreeWalker{
                 LiteralType.Int => int.Parse(literal.value.value),
                 LiteralType.String => literal.value.value,
                 LiteralType.Char => literal.value.value[0],
-                LiteralType.Varname => GetVariable(literal.value.value),
+                LiteralType.Varname => FindVariable(literal.value.value),
                 LiteralType.True => true,
                 LiteralType.False => false,
                 _ => throw new Exception("Unexpected literaltype: " + literal.type.ToString()),
