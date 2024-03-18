@@ -208,6 +208,10 @@ class TreeWalker{
             }
             return method.Invoke(instance, finalArgs.ToArray());
         }
+        else if(right is Literal literal){
+            var property = type.GetProperty(literal.value.value);
+            return property.GetValue(instance);
+        }
         else{
             throw new NotImplementedException();
         }

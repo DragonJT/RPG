@@ -28,10 +28,11 @@ AddLight(position, lookAt){
 Ready(){
     AddCamera(new Vector3(5,5,5), new Vector3(0,0,0));
     AddLight(new Vector3(2,5,5), new Vector3(0,0,0));
-    AddBox(new Vector3(0,0,0), new Vector3(1,1,1), new Color(1,0,0,1));
-    AddBox(new Vector3(3,3,0), new Vector3(1.5,1.5,1.5), new Color(0,0,1,1));
+    global box1 = AddBox(new Vector3(0,0,0), new Vector3(1,1,1), new Color(1,0,0,1));
+    global box2 = AddBox(new Vector3(3,3,0), new Vector3(1.5,1.5,1.5), new Color(0,0,1,1));
 }
 
 Input(event){
-    
+    box1.Position = box1.Position + new Vector3(-0.1,0,0);
+    box2.Position = box2.Position + new Vector3(0.05,0,0);
 }
